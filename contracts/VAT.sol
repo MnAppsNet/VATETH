@@ -110,7 +110,8 @@ contract VAT{
         }
         uint8 rule;
         for (rule=1; rule<=latestRule; rule++) {
-            if (msg.value < VATRules[rule].ceilAmount) break;
+            if (msg.value > VATRules[rule].ceilAmount) continue;
+            break;
             //If no rule found the latest is going to be used
         }
         //The check below related to the comment costs gas,

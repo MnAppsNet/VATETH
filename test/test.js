@@ -92,6 +92,8 @@ class test{
         //Send funds and return receipt
         const gasPrice = await this.getGasPrice();
         const gas = await this.estimateGas(this.contract.methods.sendFunds(toAddress));
+        //taxID = this.web3.utils.utf8ToHex(taxID);
+        //comment = this.web3.utils.utf8ToHex(comment);
 
         const amountInWai = await this.web3.utils.toWei(amount);
         return await ( this.contract.methods.sendFunds(toAddress,taxID,comment).send({

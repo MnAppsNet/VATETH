@@ -28,6 +28,13 @@ async function startTesting(test){
     test.addUser ("user2",( await web3.eth.getAccounts())[2]);
     test.addUser ("user3",( await web3.eth.getAccounts())[3]);
 
+    let subscription = test.web3.eth.subscribe('logs', {
+        address: test.admin
+    }, function(error, result){
+        if (!error)
+            console.log(result);
+    });
+
     for (let key in TestCases){
         testCase = TestCases[key];
         test.startTimer();

@@ -108,7 +108,7 @@ async function disableMaintenanceFromAdmin(test){
 
 async function sendFundsNoVAT(test){
     const initialBalance = parseFloat(await test.getBalance(test.user2));
-    const receipt = await test.sendFunds(test.user1,test.user2,'0.04');
+    const receipt = await test.sendFunds(test.user1,test.user2,'0.04',"Test");
     const newBalance = parseFloat(await test.getBalance(test.user2));
     if (initialBalance + 0.04 == newBalance){
         return test.pass(receipt);
