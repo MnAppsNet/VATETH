@@ -11,23 +11,22 @@ contract VAT{
     struct user{    //Used to handle user info
         address acount;                                 //The account of the user
         string taxID;                                   //The tax ID of the user
-        string comment;                                 //A comment given with the biggest amount send (not mandatory if not specified)
-        uint maxAmount;                                 //The max amount sent
+        uint fundsReceived;                             //The total funds received
     }
     struct VATRule{ //Used to handle VAT rules
         uint8 percentage;                               //The VAT percentage of a specific rule
         uint ceilAmount;                                //The ceil amounts of a specific rule
         uint balance;                                   //The balance of a specific rule
-        mapping(string=>user) users;                    //Users that provided a tax id (address + taxid => user)
         bool requireTaxID;                              //It is set to true if a tax id is required
-        bool requireComment;                            //It is set to true if a comment is required
     }
 
     //State variables :
     address payable private admin;                      //Admin can modify the VAT percentages
     uint8 private latestRule;                           //Latest rule in the vatPercenteges
     mapping(uint8 => VATRule) private VATRules;         //The details of each VAT Rule
+    mapping(string=>user) users;                        //Users that provided a tax id (address + taxid => user)
     bool private maintenance;                           //Can be set to true by the admin to disable the use of send function
+    string userWithMostFundsReceived;                   //Stores the userID of the recipient with the most funds received
 
     //Special methods:
     //----------------------------------------------------------------
@@ -56,7 +55,7 @@ contract VAT{
     function destroy() external adminOnly() {
         selfdestruct(admin);
     }
-    function addVatRule(uint ceilAmount, uint8 percentage, bool requireTaxID, bool requireComment) external adminOnly() returns(uint8 rule){
+    function addVatRule(uint ceilAmount, uint8 percentage, bool requireTaxID) external adminOnly() returns(uint8 rule){
         if (latestRule > 254) revert MaxRulesReached(latestRule); //Max rules check, overflow protection
         if (ceilAmount <= VATRules[latestRule].ceilAmount) revert AscendingOrderRequired(VATRules[latestRule].ceilAmount); //Check ceil amounts order. They need to be sorted in ascending order.
         if (percentage>99) revert Exception("VAT percentage can be up to 99%"); //Allow a vat percentage up to 99%
@@ -65,7 +64,6 @@ contract VAT{
         VATRules[latestRule].ceilAmount = ceilAmount;
         VATRules[latestRule].percentage = 100 - percentage; //We store the percentage to be transfered from the contract, to avoid calculating it every time and spend gas
         VATRules[latestRule].requireTaxID = requireTaxID;
-        VATRules[latestRule].requireComment = requireComment;
     }
     function initializeVatRules() external adminOnly(){
         //Set latest rule to 0, this will cause the rules to be overwritten when a new rule is added
@@ -78,9 +76,21 @@ contract VAT{
     function setMaintenanceFlag(bool state) external adminOnly{
         maintenance = state;
     }
+    function getRecipientWithMostFundsReceived() external view adminOnly returns(string memory userID){
+        userID = userWithMostFundsReceived;
+    }
 
     //User functions :
     //----------------------------------------------------------------
+    function getUserFundsReceived(string memory taxID, address userAddress) external view returns(uint256 fundsReceived){
+        //Get the total funds a user received. We make this information public for full transparency.
+        fundsReceived = this.getUserFundsReceived(getUserID(userAddress,taxID));
+    }
+    function getUserFundsReceived(string memory userID) external view returns(uint256 fundsReceived){
+        //Get the total funds a user received. We make this information public for full transparency.
+        fundsReceived = users[userID].fundsReceived;
+    }
+
     function getVatRuleValues(uint8 ruleID) external view returns(uint ceilAmount, uint8 vatPercentage){
         //Get the current VAT rules that are active. We allow anyone to get this info in order for the
         //VAT mechanism to be transparent
@@ -94,12 +104,9 @@ contract VAT{
         return address(this).balance;
     }
     function sendFunds(address receiver) external payable{
-        this.sendFunds(receiver,"","");
+        this.sendFunds(receiver,"");
     }
     function sendFunds(address receiver, string memory taxID) external payable{
-        this.sendFunds(receiver,taxID,"");
-    }
-    function sendFunds(address receiver, string memory taxID, string memory comment) external payable{
         //Send funds to another address and pay VAT based on the currently active VAT rules
         if(maintenance) revert Exception("The contract is in maintenance, try again later...");
         if(msg.value <= 0) revert Exception("No funds have been sent");
@@ -109,20 +116,12 @@ contract VAT{
             return;
         }
         uint8 rule;
-        for (rule=1; rule<=latestRule; rule++) {
+        for (rule=1; rule<latestRule; rule++) {
             if (msg.value > VATRules[rule].ceilAmount) continue;
             break;
             //If no rule found the latest is going to be used
         }
-        //The check below related to the comment costs gas,
-        //it can be removed, it is not that important
-        if(VATRules[rule].requireComment){
-            if (strCompare(comment,"")){     //Check if a comment is provided when required
-                revert Exception("A comment is required but not provided");
-            }else if (strlen(comment) > 80){ //80 characters are allowed max, a check in byte length would cost less gas
-                revert Exception("The provided comment is too long. Max length 80 chars");
-            }
-        }
+        uint amountToSend = msg.value * VATRules[rule].percentage / 100;
         //Check if taxID and if provided, keep record of the max amount sent by this user :
         if(VATRules[rule].requireTaxID){
             if (strCompare(taxID,"")){       //Check if a comment is provided when required
@@ -130,15 +129,15 @@ contract VAT{
             }else if (bytes(taxID).length > 20){ //20 bytes are allowed max
                 revert Exception("The provided tax ID is too long. Max length 20 bytes");
             }
-            //Keep record of the maximum amount sent by this specific user
-            string memory userID = concat(toString(msg.sender),taxID);
-            if (VATRules[rule].users[userID].maxAmount < msg.value){
-                VATRules[rule].users[userID].maxAmount = msg.value;
-                VATRules[rule].users[userID].comment = comment;
+            //Keep record of the received amount of the user
+            string memory userID = getUserID(msg.sender,taxID);
+            users[userID].fundsReceived += amountToSend;
+            if (users[userWithMostFundsReceived].fundsReceived < users[userID].fundsReceived){
+                //In case the user has the most received funds, store the userID to the userWithMostFundsReceived variable
+                userWithMostFundsReceived = userID;
             }
         }
-        uint amountToSend = (msg.value / VATRules[rule].percentage) * 100          //quotient * 100
-                            + (msg.value * 100 / VATRules[rule].percentage) % 100; //remainder
+
         //Finally send the funds to the receipient :
         send(receiver,amountToSend);
         VATRules[rule].balance += msg.value - amountToSend; //Update Vat Rule Balance
@@ -147,6 +146,9 @@ contract VAT{
     //Private and internal functions :
     function send(address receiver, uint amount) internal{
         payable(receiver).transfer(amount);
+    }
+    function getUserID(address userAddress, string memory userTaxID) internal pure returns(string memory userID){
+        userID = concat(userTaxID,toString(userAddress));
     }
     function concat(string memory str1, string memory str2) internal pure returns(string memory concatinated) {
         //Concatenate two strings

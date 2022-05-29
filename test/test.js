@@ -88,15 +88,13 @@ class test{
         else
             return (await this.web3.eth.getBlock("latest")).gasLimit;
     }
-    async sendFunds(fromAddress,toAddress,amount,taxID="",comment=""){
+    async sendFunds(fromAddress,toAddress,amount,taxID="",){
         //Send funds and return receipt
         const gasPrice = await this.getGasPrice();
         const gas = await this.estimateGas(this.contract.methods.sendFunds(toAddress));
-        //taxID = this.web3.utils.utf8ToHex(taxID);
-        //comment = this.web3.utils.utf8ToHex(comment);
 
         const amountInWai = await this.web3.utils.toWei(amount);
-        return await ( this.contract.methods.sendFunds(toAddress,taxID,comment).send({
+        return await ( this.contract.methods.sendFunds(toAddress,taxID).send({
             from: fromAddress,
             gas: gas,
             gasPrice: gasPrice,
@@ -122,18 +120,6 @@ class test{
 
         ceilAmount = await this.web3.utils.toWei(ceilAmount);
         return await ( this.contract.methods.addVatRule(ceilAmount,percentage,requireTaxID).send({
-            from: fromAddress,
-            gas: gas,
-            gasPrice: gasPrice
-        }) );
-    }
-    async addRule(fromAddress,ceilAmount,percentage,requireTaxID,requireComment){
-        //Add a new VAT rule and return receipt
-        const gasPrice = await this.getGasPrice();
-        const gas = await this.estimateGas(this.contract.methods.addVatRule(ceilAmount,percentage,requireTaxID,requireComment),fromAddress,gasPrice);
-
-        ceilAmount = await this.web3.utils.toWei(ceilAmount);
-        return await ( this.contract.methods.addVatRule(ceilAmount,percentage,requireTaxID,requireComment).send({
             from: fromAddress,
             gas: gas,
             gasPrice: gasPrice
@@ -167,6 +153,22 @@ class test{
         return await (this.contract.methods.initializeVatRules().call({
             from: fromAddress
         }) );
+    }
+    async getRecipientWithMostFundsReceived(fromAddress){
+        //Get the useID of the recipient with the most funds received
+        return await (this.contract.methods.getRecipientWithMostFundsReceived().call({
+            from: fromAddress
+        }) );
+    }
+    async getUserFundsReceived(fromAddress,userID){
+        return await this.web3.utils.fromWei( await (this.contract.methods.getUserFundsReceived(userID).call({
+            from: fromAddress
+        }) ), 'ether');
+    }
+    async getUserFundsReceived(fromAddress,address,userID){
+        return await this.web3.utils.fromWei( await (this.contract.methods.getUserFundsReceived(userID,address).call({
+            from: fromAddress
+        }) ), 'ether');
     }
 }
 

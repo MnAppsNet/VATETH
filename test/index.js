@@ -37,23 +37,26 @@ async function startTesting(test){
 
     for (let key in TestCases){
         testCase = TestCases[key];
+        console.log("Test Case - " + testCase[0]);
         test.startTimer();
         let result = {};
         try{
             result = await ( testCase[1](test) );
         }catch(exception){
-            if (!('receipt' in exception))
+            if ('reason' in exception)
+                console.log(("Exception \t: %c" + exception.reason),"color:red");
+            else if (!('receipt' in exception))
                 throw exception;
-            result = test.fail(exception.receipt)
+            result = test.fail(exception.receipt);
         }
-        console.log("Test Case : " + testCase[0]);
         if(typeof result === 'undefined'){
-            console.log("Result \t\t: %cFAIL","color:red")
+            console.log("Result \t\t: %cFAIL","color:red");
             console.log("--------------------------------");
             continue;
         }
-        console.log("Result \t\t: %c" + result.status,(result.status == "PASS")?"color:green":"color:red")
-        console.log("Gas Used \t: " + result.gas)
+        console.log("Result \t\t: %c" + result.status,(result.status == "PASS")?"color:green":"color:red");
+        console.log("Gas Used \t: " + result.gas);
+        console.log("Eth spend \t: " + Math.round(await test.web3.utils.fromWei(await test.web3.eth.getGasPrice(),'ether') * result.gas * 10000000)/10000000);
         console.log("Execution time \t: " + result.time + "ms")
         console.log("--------------------------------");
     }
