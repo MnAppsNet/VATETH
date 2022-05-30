@@ -1,3 +1,9 @@
+//Test VAT.sol contract
+//Execute index.js to start testing
+//To implement a new test case, create a new function
+//in testCases.js and include it in module.exports
+//Author: Kalyvas Emmanouil
+
 const Test = require('./test');
 const Tools = require('./tools');
 const TestCases = require('./testCases')
@@ -27,13 +33,6 @@ async function startTesting(test){
     test.addUser ("user1",( await web3.eth.getAccounts())[1]);
     test.addUser ("user2",( await web3.eth.getAccounts())[2]);
     test.addUser ("user3",( await web3.eth.getAccounts())[3]);
-
-    let subscription = test.web3.eth.subscribe('logs', {
-        address: test.admin
-    }, function(error, result){
-        if (!error)
-            console.log(result);
-    });
 
     for (let key in TestCases){
         testCase = TestCases[key];

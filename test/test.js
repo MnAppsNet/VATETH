@@ -160,15 +160,23 @@ class test{
             from: fromAddress
         }) );
     }
-    async getUserFundsReceived(fromAddress,userID){
+    async getUserFundsReceivedByUserID(fromAddress,userID){
         return await this.web3.utils.fromWei( await (this.contract.methods.getUserFundsReceived(userID).call({
             from: fromAddress
         }) ), 'ether');
     }
-    async getUserFundsReceived(fromAddress,address,userID){
-        return await this.web3.utils.fromWei( await (this.contract.methods.getUserFundsReceived(userID,address).call({
+    async getUserFundsReceived(fromAddress,address,taxID){
+        return await this.getUserFundsReceivedByUserID(fromAddress,(taxID + address.toLowerCase()));
+    }
+    async getVatBalance(fromAddress,rulID){
+        return await this.web3.utils.fromWei( await (this.contract.methods.getVatBalance(rulID).call({
             from: fromAddress
-        }) ), 'ether');
+        }) ),'ether');
+    }
+    async getTotalBalance(fromAddress){
+        return await this.web3.utils.fromWei( await (this.contract.methods.getTotalBalance().call({
+            from: fromAddress
+        }) ),'ether');
     }
 }
 

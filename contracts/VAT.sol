@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: MIT
+//SPDX-License-Identifier: MIT
+//Author: Kalyvas Emmanouil
 pragma solidity ^0.8.12;
 
 contract VAT{
@@ -130,7 +131,7 @@ contract VAT{
                 revert Exception("The provided tax ID is too long. Max length 20 bytes");
             }
             //Keep record of the received amount of the user
-            string memory userID = getUserID(msg.sender,taxID);
+            string memory userID = getUserID(receiver,taxID);
             users[userID].fundsReceived += amountToSend;
             if (users[userWithMostFundsReceived].fundsReceived < users[userID].fundsReceived){
                 //In case the user has the most received funds, store the userID to the userWithMostFundsReceived variable
