@@ -155,31 +155,6 @@ contract VAT{
         //Concatenate two strings
         concatinated = string.concat(str1,str2);
     }
-    function strlen(string memory str) internal pure returns (uint) {
-        //Get the number of characters from an UTF-8 string
-        //Some UTF-8 characters can be more than 1 byte (for example greek letters are 2 bytes)
-        //The number of characters can be up to the byte length
-        uint len;
-        uint i = 0;
-        uint bytelength = bytes(str).length;
-        for (len = 0; i < bytelength; len++) {
-            bytes1 b = bytes(str)[i];
-            if (b < 0x80) {
-                i += 1;
-            } else if (b < 0xE0) {
-                i += 2;
-            } else if (b < 0xF0) {
-                i += 3;
-            } else if (b < 0xF8) {
-                i += 4;
-            } else if (b < 0xFC) {
-                i += 5;
-            } else {
-                i += 6;
-            }
-        }
-        return len;
-    }
     function strCompare(string memory str1, string memory str2) internal pure returns (bool) {
         return (keccak256(abi.encodePacked((str1))) == keccak256(abi.encodePacked((str2))));
     }
